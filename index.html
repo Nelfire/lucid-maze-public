@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Labyrinthe Cauchemar Lucide</title>
+  <style>
+    :root{--bg:#121823;--stroke:rgba(255,255,255,.12);--red:#ff4d5a;--yellow:#ffd34d;--green:#45ff9a;--blue:#4db2ff;--violet:#b36bff;--cell:34px;--gap:7px;--radius:12px;--shadow:0 12px 30px rgba(0,0,0,.40);--pad:18px}*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:radial-gradient(1200px 700px at 15% 10%,rgb(77 178 255 / .12),transparent 55%),radial-gradient(900px 600px at 85% 20%,rgb(179 107 255 / .12),transparent 60%),radial-gradient(900px 700px at 50% 90%,rgb(69 255 154 / .10),transparent 55%),var(--bg);overflow:hidden;user-select:none;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}#fireflies{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}#fireflies span{position:absolute;width:4px;height:4px;border-radius:50%;background:rgb(255 255 255 / .55);box-shadow:0 0 12px rgb(255 255 255 / .45);opacity:.4;animation:float 9s ease-in-out infinite,twinkle 4.8s ease-in-out infinite}#fireflies span:nth-child(2n){width:3px;height:3px;opacity:.32;box-shadow:0 0 10px rgb(255 255 255 / .38);animation-duration:11s,6s}#fireflies span:nth-child(3n){width:5px;height:5px;opacity:.28;box-shadow:0 0 14px rgb(255 255 255 / .5);animation-duration:13s,7.5s}@keyframes float{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(12px,-16px,0)}}@keyframes twinkle{0%,100%{opacity:.25}50%{opacity:.7}}#gridLayer{position:fixed;inset:0;z-index:2;cursor:grab}#gridLayer.dragging{cursor:grabbing}#grid{position:absolute;left:0;top:0;padding:var(--pad);transform:translate(var(--tx,0),var(--ty,0));will-change:transform}#pathSvg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}#cells{position:relative;display:grid;gap:var(--gap);width:max-content;height:max-content}.cell{width:var(--cell);height:var(--cell);border-radius:var(--radius);border:1px solid rgb(255 255 255 / .10);background:rgb(255 255 255 / .03);position:relative;overflow:hidden;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}.cell.movable:hover{border-color:rgb(255 255 255 / .38);box-shadow:0 10px 20px rgb(0 0 0 / .34),0 0 14px rgb(255 255 255 / .22);transform:translateY(-1px) scale(1.02);cursor:pointer}.cell:not(.hidden):hover{border-color:rgb(255 255 255 / .26);box-shadow:0 6px 14px rgb(0 0 0 / .25),0 0 10px rgb(255 255 255 / .14);transform:translateY(-1px)}.cell .num{position:absolute;top:4px;right:6px;max-width:calc(100% - 10px);font-size:10px;line-height:1.05;color:rgb(255 255 255 / .82);pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 1px 6px rgb(0 0 0 / .60);opacity:0;transition:opacity .08s ease;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cell:not(.hidden).hasnums .num{opacity:1}.cell.hidden{background:rgb(0 0 0 / .45);border-color:rgb(255 255 255 / .04)}.cell.hidden::after{content:"";position:absolute;inset:0;border-radius:var(--radius);background:repeating-linear-gradient(45deg,rgb(255 255 255 / .04) 0,rgb(255 255 255 / .04) 8px,transparent 8px,transparent 16px);opacity:.55;pointer-events:none}.cell.current{border:2px solid rgb(255 255 255 / .65);box-shadow:0 0 0 2px rgb(77 178 255 / .28),0 0 18px rgb(77 178 255 / .25)}.cell.current::before{content:"";position:absolute;inset:-7px;border-radius:calc(var(--radius) + 6px);background:radial-gradient(closest-side,rgb(255 255 255 / .12),transparent 70%);filter:blur(2px);opacity:.45;pointer-events:none}.cell.applied{border-color:rgb(255 255 255 / .20)}.cell.applied.fill{background:color-mix(in srgb,var(--paint) 22%,rgb(255 255 255 / .03));border-color:color-mix(in srgb,var(--paint) 65%,rgb(255 255 255 / .18))}.cell.applied.orb{background:rgb(255 255 255 / .03);border:2px solid color-mix(in srgb,var(--paint) 75%,rgb(255 255 255 / .10));box-shadow:0 0 14px color-mix(in srgb,var(--paint) 28%,transparent)}#cellTooltip{position:fixed;z-index:50;left:0;top:0;transform:translate(-9999px,-9999px);pointer-events:none;padding:7px 10px;border-radius:10px;border:1px solid rgb(255 255 255 / .45);color:rgb(16 20 28 / .95);font-size:12px;font-weight:700;letter-spacing:.2px;box-shadow:0 8px 20px rgb(0 0 0 / .35);white-space:nowrap;opacity:0;transition:opacity .12s ease}#cellTooltip.visible{opacity:1}.toolbar{position:fixed;z-index:12;top:16px;left:50%;transform:translateX(-50%);width:min(720px, calc(100vw - 32px));display:flex;justify-content:center}.toolbar .row{justify-content:center}.toolbar .btn{font-size:22px;padding:15px 17px;border-radius:16px}.overlay{position:fixed;z-index:10;top:50%;left:calc(16px + 60px);transform:translate(var(--overlay-tx,0),calc(-50% + var(--overlay-ty, 0px)));width:min(410px, calc(100vw - 32px));background:linear-gradient(180deg,rgb(255 255 255 / .05),rgb(255 255 255 / .02));border:1px solid var(--stroke);border-radius:16px;box-shadow:var(--shadow);backdrop-filter:blur(8px);overflow:hidden}.overlay-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid rgb(255 255 255 / .08);user-select:none;cursor:grab;background:rgb(0 0 0 / .18);color:rgb(255 255 255 / .92)}.overlay-header.dragging{cursor:grabbing}.overlay-header b{font-size:14px;letter-spacing:.2px}.overlay-header span{font-size:12px;color:rgb(255 255 255 / .75);white-space:nowrap}.overlay-body{padding:12px 14px 14px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}.btn{border:1px solid rgb(255 255 255 / .12);background:rgb(255 255 255 / .04);color:rgb(255 255 255 / .92);padding:9px 10px;border-radius:12px;cursor:pointer;font-size:13px;transition:.15s ease}.btn:hover{border-color:rgb(255 255 255 / .22);background:rgb(255 255 255 / .06)}.section-title{margin:10px 0 8px;font-size:12px;letter-spacing:.12em;color:rgb(255 255 255 / .78);text-transform:uppercase}.pills{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.pills:last-of-type{margin-bottom:6px}.overlay-info{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid rgb(255 255 255 / .12);background:rgb(255 255 255 / .04);color:rgb(255 255 255 / .78);font-size:12px;line-height:1.35}.overlay-info .info-text{display:inline-flex;gap:6px;align-items:center;color:rgb(255 255 255 / .9);text-shadow:0 0 10px rgb(255 255 255 / .25);animation:infoPulse 2.6s ease-in-out infinite}@keyframes infoPulse{0%,100%{opacity:.75;text-shadow:0 0 6px rgb(255 255 255 / .18)}50%{opacity:1;text-shadow:0 0 14px rgb(255 255 255 / .4)}}.pill{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 8px;border-radius:14px;border:1px solid rgb(255 255 255 / .12);background:rgb(255 255 255 / .03);cursor:pointer;transition:.15s ease;font-size:13px;white-space:nowrap;color:#fff}.pill:hover{border-color:rgb(255 255 255 / .22);background:rgb(255 255 255 / .05)}.pill.is-validated{filter:grayscale(.95) saturate(.2);opacity:.45}.dot{width:10px;height:10px;border-radius:999px;box-shadow:0 0 14px rgb(255 255 255 / .15);flex:0 0 auto}.pill[data-color="red"] .dot{background:var(--red);box-shadow:0 0 14px rgb(255 77 90 / .35)}.pill[data-color="yellow"] .dot{background:var(--yellow);box-shadow:0 0 14px rgb(255 211 77 / .28)}.pill[data-color="green"] .dot{background:var(--green);box-shadow:0 0 14px rgb(69 255 154 / .25)}.pill[data-color="blue"] .dot{background:var(--blue);box-shadow:0 0 14px rgb(77 178 255 / .25)}.pill[data-color="violet"] .dot{background:var(--violet);box-shadow:0 0 14px rgb(179 107 255 / .25)}.validated-panel{margin-top:14px;padding-top:12px;border-top:1px solid rgb(255 255 255 / .12)}.validated-list{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.validated-item{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid rgb(255 255 255 / .12);border-radius:12px;background:rgb(255 255 255 / .03);padding:8px 6px;font-size:12px;color:rgb(255 255 255 / .9);cursor:pointer;user-select:none;transition:transform .15s ease,background .15s ease,border-color .15s ease,box-shadow .15s ease}.validated-item:hover{transform:translateY(-1px);border-color:rgb(255 255 255 / .28);box-shadow:0 8px 14px rgb(0 0 0 / .22)}.validated-item .label{text-decoration:none;transition:text-decoration .15s ease}.validated-item.is-active{border-color:rgb(95 255 177 / .78);background:linear-gradient(135deg,rgb(69 255 154 / .35),rgb(41 175 108 / .28));box-shadow:0 0 0 1px rgb(95 255 177 / .28),0 10px 22px rgb(32 116 76 / .35);color:rgb(245 255 249 / .98)}.validated-item.is-active .label{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:rgb(20 70 44 / .95)}.validated-item .dot{width:10px;height:10px}.validated-item[data-color="red"] .dot{background:var(--red);box-shadow:0 0 14px rgb(255 77 90 / .35)}.validated-item[data-color="yellow"] .dot{background:var(--yellow);box-shadow:0 0 14px rgb(255 211 77 / .28)}.validated-item[data-color="green"] .dot{background:var(--green);box-shadow:0 0 14px rgb(69 255 154 / .25)}.validated-item[data-color="blue"] .dot{background:var(--blue);box-shadow:0 0 14px rgb(77 178 255 / .25)}.validated-item[data-color="violet"] .dot{background:var(--violet);box-shadow:0 0 14px rgb(179 107 255 / .25)}.validated-item:focus-visible{outline:2px solid rgb(95 255 177 / .9);outline-offset:2px}.stats-share-card{margin-top:8px;border:1px solid rgb(255 255 255 / .22);border-radius:16px;overflow:hidden;background:radial-gradient(130% 110% at 0% 0%,rgb(77 178 255 / .26),transparent 45%),radial-gradient(120% 100% at 100% 0%,rgb(179 107 255 / .25),transparent 46%),linear-gradient(145deg,rgb(23 30 42 / .92),rgb(12 16 25 / .95));box-shadow:0 16px 36px rgb(0 0 0 / .45),inset 0 1px 0 rgb(255 255 255 / .08)}.stats-share-head{padding:12px 14px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:rgb(255 255 255 / .8);border-bottom:1px solid rgb(255 255 255 / .12);background:rgb(0 0 0 / .2);display:flex;align-items:center;justify-content:space-between;gap:8px}.stats-share-head b{color:#fff;font-size:13px;letter-spacing:.04em}.stats-share-grid{padding:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stats-chip{border:1px solid rgb(255 255 255 / .13);border-radius:12px;padding:10px;background:rgb(255 255 255 / .04);min-height:72px}.stats-chip .k{font-size:11px;color:rgb(255 255 255 / .75);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}.stats-chip .v{font-size:18px;line-height:1.2;font-weight:800;color:rgb(255 255 255 / .98)}.stats-spotlight{margin:0 14px 14px;border-radius:14px;padding:11px 12px;border:1px solid rgb(255 255 255 / .16);background:rgb(255 255 255 / .05);font-size:13px;line-height:1.35;color:rgb(255 255 255 / .9)}#ctxMenu{position:fixed;z-index:30;min-width:160px;padding:8px;border-radius:12px;border:1px solid rgb(255 255 255 / .14);background:rgb(12 16 22 / .92);box-shadow:var(--shadow);backdrop-filter:blur(8px);display:none}#ctxMenu button{width:100%;text-align:left;border:1px solid rgb(255 255 255 / .10);background:rgb(255 255 255 / .04);color:rgb(255 255 255 / .92);padding:10px 10px;border-radius:10px;cursor:pointer;font-size:13px}#ctxMenu button:hover{border-color:rgb(255 255 255 / .22);background:rgb(255 255 255 / .06)}#ctxMenu button:disabled{opacity:.45;cursor:not-allowed}#modalBackdrop{position:fixed;inset:0;z-index:40;background:linear-gradient(180deg,rgb(0 0 0 / .38),rgb(0 0 0 / .15) 48%,#fff0);display:none;align-items:flex-start;justify-content:center;padding:clamp(14px, 4vh, 44px) 16px 16px}#modal{position:relative;width:min(680px, calc(100vw - 32px));transform:translate(var(--modal-tx,0),var(--modal-ty,0));background:radial-gradient(160% 120% at 8% 0%,rgb(77 178 255 / .18),transparent 38%),radial-gradient(170% 130% at 100% 0%,rgb(179 107 255 / .17),transparent 42%),linear-gradient(160deg,rgb(20 26 36 / .98),rgb(10 14 20 / .95));border:1px solid rgb(255 255 255 / .24);border-radius:22px;box-shadow:0 24px 60px rgb(0 0 0 / .58),inset 0 1px 0 rgb(255 255 255 / .08);backdrop-filter:blur(14px);overflow:hidden}#modalHeader{padding:18px 20px;border-bottom:1px solid rgb(255 255 255 / .12);display:flex;justify-content:space-between;align-items:center;color:rgb(255 255 255 / .92);background:rgb(0 0 0 / .25);cursor:grab;user-select:none}#modalHeader.dragging{cursor:grabbing}#modalHeader b{font-size:16px;letter-spacing:.3px}#modalBody{padding:22px 20px 20px;color:rgb(255 255 255 / .92)}.modalStep{font-size:26px;font-weight:800;letter-spacing:.6px;margin-bottom:10px;text-align:center}.modalMeta{color:rgb(255 255 255 / .70);font-size:14px;margin-bottom:18px;text-align:center;padding:10px 12px;border-radius:12px;border:1px solid rgb(255 255 255 / .12);background:rgb(255 255 255 / .04)}.modalRow{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}.btn.primary{background:linear-gradient(135deg,rgb(77 178 255 / .35),rgb(179 107 255 / .3));border-color:rgb(255 255 255 / .28);box-shadow:0 10px 20px rgb(0 0 0 / .35)}.btn.primary:hover{background:linear-gradient(135deg,rgb(77 178 255 / .45),rgb(179 107 255 / .38));border-color:rgb(255 255 255 / .4)}.btn.success{background:linear-gradient(135deg,rgb(69 255 154 / .38),rgb(62 214 132 / .32));border-color:rgb(95 255 177 / .55);box-shadow:0 10px 20px rgb(0 0 0 / .35),0 0 18px rgb(69 255 154 / .22)}.btn.success:hover{background:linear-gradient(135deg,rgb(69 255 154 / .48),rgb(62 214 132 / .4));border-color:rgb(95 255 177 / .7)}.finish-action{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:26;width:min(380px, calc(100vw - 32px))}.finish-action .btn{width:100%;font-size:14px;font-weight:700;padding:11px 14px;display:block;text-align:center}.external-links{position:fixed;right:16px;bottom:16px;z-index:25;width:min(300px, calc(100vw - 32px));display:grid;gap:10px}.neon-link,.external-links summary{display:block;width:100%;border:1px solid rgb(77 178 255 / .45);border-radius:14px;padding:11px 14px;background:linear-gradient(140deg,rgb(77 178 255 / .2),rgb(179 107 255 / .2));color:rgb(255 255 255 / .95);text-decoration:none;font-size:14px;font-weight:600;letter-spacing:.2px;text-align:center;box-shadow:0 0 18px rgb(77 178 255 / .3),0 0 30px rgb(179 107 255 / .2),inset 0 0 20px rgb(255 255 255 / .06);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;backdrop-filter:blur(8px)}.neon-link:hover,.external-links summary:hover{transform:translateY(-1px);border-color:rgb(179 107 255 / .65);box-shadow:0 0 20px rgb(77 178 255 / .38),0 0 38px rgb(179 107 255 / .35),inset 0 0 28px rgb(255 255 255 / .09)}.external-links details{border-radius:14px}.external-links summary{list-style:none;cursor:pointer;user-select:none}.external-links summary::-webkit-details-marker{display:none}.external-links ul{margin:8px 0 0;padding:10px;border-radius:14px;border:1px solid rgb(255 255 255 / .15);background:rgb(10 14 20 / .78);box-shadow:0 10px 24px rgb(0 0 0 / .35);display:grid;gap:8px;list-style:none}.external-links li{margin:0}.external-links li a{display:block;text-align:center;border-radius:10px;border:1px solid rgb(255 255 255 / .16);color:rgb(255 255 255 / .9);text-decoration:none;font-size:13px;padding:9px 10px;background:rgb(255 255 255 / .04);transition:.15s ease}.external-links li a:hover{border-color:rgb(77 178 255 / .5);box-shadow:0 0 14px rgb(77 178 255 / .26);background:rgb(77 178 255 / .1)}
+  </style>
+</head>
+<body>
+  <div id="fireflies" aria-hidden="true">
+    <span style="left:8%; top:18%; animation-delay:-1.2s;"></span>
+    <span style="left:22%; top:32%; animation-delay:-3.4s;"></span>
+    <span style="left:35%; top:14%; animation-delay:-2.1s;"></span>
+    <span style="left:48%; top:28%; animation-delay:-4.8s;"></span>
+    <span style="left:62%; top:18%; animation-delay:-1.9s;"></span>
+    <span style="left:76%; top:26%; animation-delay:-3.1s;"></span>
+    <span style="left:88%; top:12%; animation-delay:-5.2s;"></span>
+    <span style="left:14%; top:62%; animation-delay:-2.6s;"></span>
+    <span style="left:30%; top:74%; animation-delay:-4.1s;"></span>
+    <span style="left:52%; top:68%; animation-delay:-1.5s;"></span>
+    <span style="left:70%; top:82%; animation-delay:-3.7s;"></span>
+    <span style="left:86%; top:66%; animation-delay:-2.9s;"></span>
+  </div>
+
+  <div id="gridLayer" aria-label="Grille">
+    <div id="grid">
+      <svg id="pathSvg"></svg>
+      <div id="cells"></div>
+    </div>
+  </div>
+
+  <div id="cellTooltip" role="tooltip" aria-hidden="true"></div>
+
+  <div class="toolbar" aria-label="Commandes principales">
+    <div class="row">
+      <button class="btn" id="btnUndo" type="button">Retour (Ctrl+Z)</button>
+      <button class="btn" id="btnRedo" type="button">Refaire (Ctrl+Y)</button>
+      <button class="btn" id="btnReset" type="button">Réinitialiser</button>
+      <button class="btn" id="btnCenter" type="button">Centrer</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="overlay-header">
+      <b>Couleurs</b>
+    </div>
+
+    <div class="overlay-body">
+      <div class="section-title">SALLE (remplissage)</div>
+      <div class="pills">
+        <button class="pill" data-kind="cell" data-color="red" type="button"><span class="dot"></span>Rouge</button>
+        <button class="pill" data-kind="cell" data-color="yellow" type="button"><span class="dot"></span>Jaune</button>
+        <button class="pill" data-kind="cell" data-color="green" type="button"><span class="dot"></span>Vert</button>
+        <button class="pill" data-kind="cell" data-color="blue" type="button"><span class="dot"></span>Bleu</button>
+        <button class="pill" data-kind="cell" data-color="violet" type="button"><span class="dot"></span>Violet</button>
+      </div>
+
+      <div class="section-title">ORBE (bord)</div>
+      <div class="pills">
+        <button class="pill" data-kind="orb" data-color="red" type="button"><span class="dot"></span>Rouge</button>
+        <button class="pill" data-kind="orb" data-color="yellow" type="button"><span class="dot"></span>Jaune</button>
+        <button class="pill" data-kind="orb" data-color="green" type="button"><span class="dot"></span>Vert</button>
+        <button class="pill" data-kind="orb" data-color="blue" type="button"><span class="dot"></span>Bleu</button>
+        <button class="pill" data-kind="orb" data-color="violet" type="button"><span class="dot"></span>Violet</button>
+      </div>
+
+      <div class="overlay-info">
+        <span class="info-text">💡 Astuce : en faisant un clique droit sur une cellule, vous pouvez suivre étape par étape le chemin pour vous rendre à la position.</span>
+      </div>
+
+      <div class="overlay-info">
+        Le labyrinthe du site ne semble plus ressembler au labyrinthe en jeu ? Vous êtes peut-être tombé sur une salle piégée qui a téléporté votre personnage. La meilleure option reste de réinitialiser le plan.
+      </div>
+
+      <div class="validated-panel">
+        <div class="section-title">Couleurs validées</div>
+        <div class="validated-list" id="validatedList">
+          <button class="validated-item" data-color="red" data-validated-color="red" type="button" aria-pressed="false"><span class="dot"></span><span class="label">Rouge</span></button>
+          <button class="validated-item" data-color="yellow" data-validated-color="yellow" type="button" aria-pressed="false"><span class="dot"></span><span class="label">Jaune</span></button>
+          <button class="validated-item" data-color="green" data-validated-color="green" type="button" aria-pressed="false"><span class="dot"></span><span class="label">Vert</span></button>
+          <button class="validated-item" data-color="blue" data-validated-color="blue" type="button" aria-pressed="false"><span class="dot"></span><span class="label">Bleu</span></button>
+          <button class="validated-item" data-color="violet" data-validated-color="violet" type="button" aria-pressed="false"><span class="dot"></span><span class="label">Violet</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context menu -->
+  <div id="ctxMenu">
+    <button id="ctxGo">Se rendre à cette position</button>
+    <button id="ctxErase">Effacer marqueur coloré</button>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalBackdrop">
+    <div id="modal">
+      <div id="modalHeader">
+        <b>Itinéraire</b>
+        <button class="btn" id="modalClose" type="button">Fermer</button>
+      </div>
+      <div id="modalBody">
+        <div class="modalStep" id="modalStepText">—</div>
+        <div class="modalMeta" id="modalMetaText">—</div>
+        <div class="modalRow">
+          <button class="btn primary" id="modalDone" type="button">Étape suivante</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="finish-action" aria-label="Action principale de fin de labyrinthe">
+    <button class="btn success" id="btnFinishMaze" type="button">🏁 Marquer labyrinthe comme terminé</button>
+  </div>
+
+  <div class="external-links" aria-label="Liens externes">
+
+    <a
+      class="neon-link"
+      id="btnDonation"
+      href="https://www.paypal.com/donate/?business=multistreampov@gmail.com"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      💖 Faire un don
+    </a>
+
+    <details>
+      <summary>✨ Autres créations</summary>
+      <ul>
+        <li><a href="https://temporary-email.cloud/" target="_blank" rel="noopener noreferrer">Adresses email jetable</a></li>
+        <li><a href="https://www.multistreampov.tv/" target="_blank" rel="noopener noreferrer">Suivi multi-POV twitch</a></li>
+        <li><a href="http://www.sortons.fr/" target="_blank" rel="noopener noreferrer">Map intéractive évènements région</a></li>
+      </ul>
+    </details>
+  </div>
+
+  <div id="confirmBackdrop" style="display:none; position:fixed; inset:0; z-index:45; align-items:center; justify-content:center; padding:16px; background:rgba(0,0,0,.5);">
+    <div id="confirmModal" style="width:min(560px,calc(100vw - 32px)); border:1px solid rgba(255,255,255,.24); border-radius:18px; background:linear-gradient(160deg, rgba(20,26,36,.98), rgba(10,14,20,.95)); color:rgba(255,255,255,.93); box-shadow:0 20px 50px rgba(0,0,0,.6);">
+      <div style="display:flex; align-items:center; gap:10px; padding:18px 18px 8px;">
+        <div style="font-size:22px; font-weight:800; line-height:1;" id="confirmEmoji">✨</div>
+        <div style="font-size:18px; font-weight:700;" id="confirmTitle">Confirmation</div>
+      </div>
+      <div style="padding:10px 18px 14px; font-size:14px; color:rgba(255,255,255,.82); line-height:1.45;" id="confirmMessage">—</div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; padding:0 18px 18px; flex-wrap:wrap;" id="confirmActions"></div>
+    </div>
+  </div>
+
+  <script>
+    const rootStyle=getComputedStyle(document.documentElement);const colorMap={red:rootStyle.getPropertyValue('--red').trim(),yellow:rootStyle.getPropertyValue('--yellow').trim(),green:rootStyle.getPropertyValue('--green').trim(),blue:rootStyle.getPropertyValue('--blue').trim(),violet:rootStyle.getPropertyValue('--violet').trim(),};const gridLayer=document.getElementById('gridLayer');const gridEl=document.getElementById('grid');const cellsEl=document.getElementById('cells');const pathSvg=document.getElementById('pathSvg');const overlayEl=document.getElementById('overlay');const overlayHeader=overlayEl.querySelector('.overlay-header');const cellTooltip=document.getElementById('cellTooltip');const validatedList=document.getElementById('validatedList');const colorLabels={red:{m:'Rouge',f:'Rouge'},yellow:{m:'Jaune',f:'Jaune'},green:{m:'Vert',f:'Verte'},blue:{m:'Bleu',f:'Bleue'},violet:{m:'Violet',f:'Violette'},};const ctxMenu=document.getElementById('ctxMenu');const ctxGo=document.getElementById('ctxGo');const ctxErase=document.getElementById('ctxErase');const modalBackdrop=document.getElementById('modalBackdrop');const modalEl=document.getElementById('modal');const modalHeader=document.getElementById('modalHeader');const modalStepText=document.getElementById('modalStepText');const modalMetaText=document.getElementById('modalMetaText');const modalDone=document.getElementById('modalDone');const modalClose=document.getElementById('modalClose');const btnReset=document.getElementById('btnReset');const btnFinishMaze=document.getElementById('btnFinishMaze');const btnDonation=document.getElementById('btnDonation');const confirmBackdrop=document.getElementById('confirmBackdrop');const confirmEmoji=document.getElementById('confirmEmoji');const confirmTitle=document.getElementById('confirmTitle');const confirmMessage=document.getElementById('confirmMessage');const confirmActions=document.getElementById('confirmActions');function keyOf(r,c){return `${r},${c}`}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function manhattan(a,b){return Math.abs(a.r-b.r)+Math.abs(a.c-b.c)}
+function getCellSize(){return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||34}
+function getGap(){return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap'))||7}
+function getPad(){return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--pad'))||18}
+function setCellSize(px){const clamped=clamp(px,14,120);document.documentElement.style.setProperty('--cell',clamped+'px');const gap=clamp(Math.round(clamped*0.22),3,16);document.documentElement.style.setProperty('--gap',gap+'px');renderPaths()}
+let minR=-2,maxR=2,minC=-2,maxC=2;let cur={r:0,c:0};let facing=1;const discovered=new Set();const numsByCell=new Map();let stepCounter=0;const painted=new Map();const validatedColors=new Set();const steps=[];const cellEls=new Map();const history=[];const redoStack=[];let isReplayingRedo=!1;let resetCount=0;let donationClicks=0;let startedAt=Date.now();const STORAGE_KEY='lucid-maze-state-v1';function serializableAction(action){return JSON.parse(JSON.stringify(action))}
+function persistState(){const payload={minR,maxR,minC,maxC,cur,facing,discovered:Array.from(discovered),numsByCell:Array.from(numsByCell.entries()),stepCounter,painted:Array.from(painted.entries()),steps,history:history.map(serializableAction),redoStack:redoStack.map(serializableAction),tx,ty,overlayTx,overlayTy,resetCount,donationClicks,startedAt,validatedColors:Array.from(validatedColors),};localStorage.setItem(STORAGE_KEY,JSON.stringify(payload))}
+function hydrateFromStorage(){const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return!1;try{const payload=JSON.parse(raw);minR=payload.minR;maxR=payload.maxR;minC=payload.minC;maxC=payload.maxC;cur=payload.cur;facing=payload.facing;discovered.clear();for(const k of payload.discovered||[])discovered.add(k);numsByCell.clear();for(const[k,arr]of payload.numsByCell||[])numsByCell.set(k,arr);stepCounter=payload.stepCounter||0;painted.clear();for(const[k,v]of payload.painted||[])painted.set(k,v);steps.length=0;for(const s of payload.steps||[])steps.push(s);history.length=0;for(const action of payload.history||[])history.push(action);redoStack.length=0;for(const action of payload.redoStack||[])redoStack.push(action);resetCount=payload.resetCount||0;donationClicks=payload.donationClicks||0;startedAt=payload.startedAt||Date.now();validatedColors.clear();for(const color of payload.validatedColors||[])validatedColors.add(color);rebuildDomFromScratch();syncValidatedControls();setTranslate(payload.tx||0,payload.ty||0);setOverlayTranslate(payload.overlayTx||0,payload.overlayTy||0);return!0}catch{localStorage.removeItem(STORAGE_KEY);return!1}}
+function recordAction(action){history.push(action);if(!isReplayingRedo)redoStack.length=0;persistState()}
+let tx=0,ty=0;let isDraggingGrid=!1;let dragMoved=!1;let startX=0,startY=0;let startTx=0,startTy=0;let lastCurrentKey=null;let overlayTx=0;let overlayTy=0;let isDraggingOverlay=!1;let overlayStartX=0;let overlayStartY=0;let overlayStartTx=0;let overlayStartTy=0;function setOverlayTranslate(x,y){overlayTx=x;overlayTy=y;overlayEl.style.setProperty('--overlay-tx',`${overlayTx}px`);overlayEl.style.setProperty('--overlay-ty',`${overlayTy}px`)}
+let route=null;let modalTx=0;let modalTy=0;let isDraggingModal=!1;let modalStartX=0;let modalStartY=0;let modalStartTx=0;let modalStartTy=0;function setModalTranslate(x,y){modalTx=x;modalTy=y;modalEl.style.setProperty('--modal-tx',`${modalTx}px`);modalEl.style.setProperty('--modal-ty',`${modalTy}px`)}
+function setTranslate(x,y){tx=x;ty=y;gridEl.style.setProperty('--tx',`${tx}px`);gridEl.style.setProperty('--ty',`${ty}px`)}
+function showConfirmModal({emoji='✨',title='Confirmation',message='',actions=[]}){confirmEmoji.textContent=emoji;confirmTitle.textContent=title;confirmMessage.innerHTML=message;confirmActions.innerHTML='';for(const action of actions){const btn=document.createElement('button');const toneClass=action.tone?action.tone:(action.primary?'primary':'');btn.className=`btn ${toneClass}`.trim();btn.type='button';btn.textContent=action.label;btn.addEventListener('click',()=>{if(action.onClick)action.onClick();if(!action.keepOpen)closeConfirmModal();});confirmActions.appendChild(btn)}
+confirmBackdrop.style.display='flex'}
+function closeConfirmModal(){confirmBackdrop.style.display='none'}
+function humanDuration(ms){const totalSeconds=Math.max(0,Math.floor(ms/1000));const h=Math.floor(totalSeconds/3600);const m=Math.floor((totalSeconds%3600)/60);const s=totalSeconds%60;if(h>0)return `${h}h ${m}m ${s}s`;if(m>0)return `${m}m ${s}s`;return `${s}s`}
+function openFinishModal(){const isCuriousPreview=discovered.size<20;showConfirmModal({emoji:'🎉',title:'Vous avez terminé le labyrinthe ?',message:isCuriousPreview?`On dirait surtout que vous êtes curieux(se) et que vous voulez juste voir à quoi ressemble l'écran de fin 😄`:'Prêt(e) à valider votre progression ? ✨',actions:[{label:isCuriousPreview?'Bon ok, je retourne faire le labyrinthe':'Non, pas encore en fait, j\'y retourne 😢',onClick:()=>{}},{label:isCuriousPreview?'Oui, je veux juste jeter un oeil ☺️':'Oui ✅',tone:'success',keepOpen:!0,onClick:()=>{const elapsed=Date.now()-startedAt;let mostVisitedLabel='Aucun élément coloré visité';let mostVisitedCount=0;let mostVisitedColor='';for(const[k,marker]of painted.entries()){const count=(numsByCell.get(k)||[]).length;if(count<mostVisitedCount)continue;const noun=marker.type==='orb'?'orbe':'salle';const gender=marker.type==='orb'?'m':'f';mostVisitedLabel=`${noun} ${colorLabels[marker.color][gender].toLowerCase()}`;mostVisitedColor=colorMap[marker.color];mostVisitedCount=count}
+const validatedSummary=validatedColors.size?Array.from(validatedColors).map((c)=>colorLabels[c].f).join(', '):'Aucune';const donationMsg=donationClicks===0?`Aucun clic sur le bouton Donation pour le moment 😢. Si vous souhaitez me soutenir pour le travail fourni, un petit don me fera le plus grand plaisir 💖.`:`Clics sur le bouton Donation : <b>${donationClicks}</b>, merci ! En espérant que vous soyez allé au bout 😄`;const donationText=donationClicks===0?`💖 Aucun clic sur le bouton Donation pour le moment 😢. Si vous souhaitez me soutenir le travail fourni, vous pouvez cliquer dessus.`:`💖 Clics sur le bouton Donation : ${donationClicks}, merci ! En espérant que vous soyez allé au bout 😄`;const statsText=[`🏆 Labyrinthe terminé !`,`⏱️ Temps passé : ${humanDuration(elapsed)}`,`🧭 Salles visitées : ${discovered.size}`,`🔁 Réinitialisations : ${resetCount}`,`🌈 Élément coloré le plus visité : ${mostVisitedLabel} (${mostVisitedCount})`,`🎨 Couleurs positionnées : ${painted.size}`,`✅ Couleurs validées : ${validatedSummary}`,donationText].join('\n');showConfirmModal({emoji:'🥳',title:'Félicitations !',message:`
+                  <div class="stats-share-card">
+                    <div class="stats-share-head"><center><b>Stats</b></center></div>
+                    <div class="stats-share-grid">
+                      <div class="stats-chip">
+                        <div class="k">Temps total</div>
+                        <div class="v">${humanDuration(elapsed)}</div>
+                      </div>
+                      <div class="stats-chip">
+                        <div class="k">Salles visitées</div>
+                        <div class="v">${discovered.size}</div>
+                      </div>
+                      <div class="stats-chip">
+                        <div class="k">Réinitialisations</div>
+                        <div class="v">${resetCount}</div>
+                      </div>
+                      <div class="stats-chip">
+                        <div class="k">Salles marquées</div>
+                        <div class="v">${painted.size}</div>
+                      </div>
+                    </div>
+                    <div class="stats-spotlight">🌈 Salle la plus rencontrée : <b style="color:${mostVisitedColor || 'rgba(255,255,255,.95)'};">${mostVisitedLabel}</b> (<b>${mostVisitedCount}</b>)<br>💖 ${donationMsg}</div>
+                  </div>
+                `,actions:[{label:'Copier les statistiques',onClick:async()=>{try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(statsText)}else{const fallback=document.createElement('textarea');fallback.value=statsText;document.body.appendChild(fallback);fallback.select();document.execCommand('copy');fallback.remove()}}catch{}}},{label:'Fermer',primary:!0,onClick:()=>{}}]})}}]})}
+function updateGridTemplate(){const cols=(maxC-minC+1);cellsEl.style.gridTemplateColumns=`repeat(${cols}, var(--cell))`}
+function worldToPixelCenter(r,c){const cell=getCellSize();const gap=getGap();const pad=getPad();const pitch=cell+gap;const rIndex=r-minR;const cIndex=c-minC;return{x:pad+cIndex*pitch+cell/2,y:pad+rIndex*pitch+cell/2}}
+function resizeSvgToGrid(){const cell=getCellSize();const gap=getGap();const pad=getPad();const rows=(maxR-minR+1);const cols=(maxC-minC+1);const w=pad*2+(cols*cell)+((cols-1)*gap);const h=pad*2+(rows*cell)+((rows-1)*gap);pathSvg.setAttribute('width',w);pathSvg.setAttribute('height',h);pathSvg.setAttribute('viewBox',`0 0 ${w} ${h}`);pathSvg.style.width=w+'px';pathSvg.style.height=h+'px'}
+function makeCell(r,c){const k=keyOf(r,c);const el=document.createElement('div');el.className='cell hidden';el.dataset.r=String(r);el.dataset.c=String(c);const num=document.createElement('div');num.className='num';num.textContent='';el.appendChild(num);el.addEventListener('click',()=>{if(dragMoved)return;const tr=+el.dataset.r,tc=+el.dataset.c;if(tr===cur.r&&tc===cur.c)return;if(manhattan(cur,{r:tr,c:tc})!==1)return;moveTo(tr,tc,!0)});el.addEventListener('contextmenu',(e)=>{e.preventDefault();const tr=+el.dataset.r,tc=+el.dataset.c;openContextMenu(e.clientX,e.clientY,{r:tr,c:tc})});el.addEventListener('mouseenter',(e)=>{const tr=+el.dataset.r;const tc=+el.dataset.c;showTooltipForCell(tr,tc,e.clientX,e.clientY)});el.addEventListener('mousemove',(e)=>{const tr=+el.dataset.r;const tc=+el.dataset.c;showTooltipForCell(tr,tc,e.clientX,e.clientY)});el.addEventListener('mouseleave',hideTooltip);cellEls.set(k,el);return el}
+function tooltipTextFromPaint(paint){if(!paint)return'';const gender=paint.type==='cell'?'f':'m';const label=colorLabels[paint.color]?.[gender]||'Rouge';const prefix=paint.type==='cell'?'Salle':'Orbe';return `${prefix} ${label}`}
+function showTooltipForCell(r,c,clientX,clientY){const paint=painted.get(keyOf(r,c));if(!paint){hideTooltip();return}
+if(validatedColors.has(paint.color)){hideTooltip();return}
+cellTooltip.textContent=tooltipTextFromPaint(paint);cellTooltip.style.background=colorMap[paint.color]||colorMap.red;const margin=12;const rect=cellTooltip.getBoundingClientRect();let x=clientX+14;let y=clientY-rect.height-14;if(x+rect.width>window.innerWidth-margin){x=window.innerWidth-rect.width-margin}
+if(y<margin){y=clientY+14}
+cellTooltip.style.transform=`translate(${Math.round(x)}px, ${Math.round(y)}px)`;cellTooltip.classList.add('visible');cellTooltip.setAttribute('aria-hidden','false')}
+function hideTooltip(){cellTooltip.classList.remove('visible');cellTooltip.style.transform='translate(-9999px, -9999px)';cellTooltip.setAttribute('aria-hidden','true')}
+function applyPaintToEl(el,paint){el.classList.remove('applied','fill','orb');el.style.removeProperty('--paint');if(!paint)return;if(validatedColors.has(paint.color))return;el.classList.add('applied');el.style.setProperty('--paint',colorMap[paint.color]||colorMap.red);el.classList.add(paint.type==='orb'?'orb':'fill')}
+function syncValidatedControls(){const toggles=validatedList.querySelectorAll('[data-validated-color]');for(const toggle of toggles){const isActive=validatedColors.has(toggle.dataset.validatedColor);toggle.classList.toggle('is-active',isActive);toggle.setAttribute('aria-pressed',isActive?'true':'false')}
+const pills=overlayEl.querySelectorAll('.pill[data-color]');for(const pill of pills){const isValidated=validatedColors.has(pill.dataset.color);pill.classList.toggle('is-validated',isValidated)}}
+function refreshPaintedCells(){for(const[k,paint]of painted.entries()){const el=cellEls.get(k);if(el)applyPaintToEl(el,paint);}
+if(cellTooltip.classList.contains('visible'))hideTooltip();}
+function setCellDiscovered(k){if(discovered.has(k))return;discovered.add(k);const el=cellEls.get(k);if(el)el.classList.remove('hidden');}
+function setCellHidden(k){discovered.delete(k);const el=cellEls.get(k);if(el){el.classList.add('hidden');el.classList.remove('hasnums');el.querySelector('.num').textContent=''}}
+function updateCellNumsDisplay(k){const el=cellEls.get(k);if(!el)return;const arr=numsByCell.get(k)||[];if(arr.length===0){el.classList.remove('hasnums');el.querySelector('.num').textContent='';return}
+el.classList.add('hasnums');el.querySelector('.num').textContent=arr.join(', ')}
+function enterCell(k){const wasDiscovered=discovered.has(k);setCellDiscovered(k);stepCounter+=1;const arr=numsByCell.get(k)||[];arr.push(stepCounter);numsByCell.set(k,arr);updateCellNumsDisplay(k);return{wasDiscovered}}
+function dirFromDelta(dr,dc){if(dr===-1&&dc===0)return 0;if(dr===0&&dc===1)return 1;if(dr===1&&dc===0)return 2;if(dr===0&&dc===-1)return 3;return null}
+function updateCurrentHighlight(){const curKey=keyOf(cur.r,cur.c);if(lastCurrentKey&&lastCurrentKey!==curKey){const prevEl=cellEls.get(lastCurrentKey);if(prevEl)prevEl.classList.remove('current');}
+const el=cellEls.get(curKey);if(el)el.classList.add('current');lastCurrentKey=curKey}
+function updateMovableHints(){for(const el of cellEls.values()){el.classList.remove('movable')}
+const adj=[{r:cur.r-1,c:cur.c},{r:cur.r+1,c:cur.c},{r:cur.r,c:cur.c-1},{r:cur.r,c:cur.c+1}];for(const pos of adj){const el=cellEls.get(keyOf(pos.r,pos.c));if(el)el.classList.add('movable');}}
+function rebuildDomFromScratch(){cellsEl.innerHTML='';cellEls.clear();updateGridTemplate();resizeSvgToGrid();const frag=document.createDocumentFragment();for(let r=minR;r<=maxR;r++){for(let c=minC;c<=maxC;c++){frag.appendChild(makeCell(r,c))}}
+cellsEl.appendChild(frag);for(const k of discovered){const el=cellEls.get(k);if(el)el.classList.remove('hidden');}
+for(const[k]of numsByCell.entries()){updateCellNumsDisplay(k)}
+for(const[k,paint]of painted.entries()){const el=cellEls.get(k);if(el)applyPaintToEl(el,paint);}
+lastCurrentKey=null;updateCurrentHighlight();updateMovableHints();renderPaths()}
+function centerOnCurrent(){const cell=getCellSize();const gap=getGap();const pad=getPad();const pitch=cell+gap;const rIndex=cur.r-minR;const cIndex=cur.c-minC;const targetX=(window.innerWidth/2)-(pad+cIndex*pitch+cell/2);const targetY=(window.innerHeight/2)-(pad+rIndex*pitch+cell/2);setTranslate(Math.round(targetX),Math.round(targetY))}
+function expandIfNeeded(){let expanded=!1;if(cur.r<=minR){minR-=1;expanded=!0}
+if(cur.r>=maxR){maxR+=1;expanded=!0}
+if(cur.c<=minC){minC-=1;expanded=!0}
+if(cur.c>=maxC){maxC+=1;expanded=!0}
+if(!expanded)return;rebuildDomFromScratch();centerOnCurrent()}
+function renderPaths(){resizeSvgToGrid();const defs=`
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L8,3 L0,6 Z" fill="rgba(255,255,255,.32)"></path>
+          </marker>
+        </defs>
+      `;const segs=steps.map(s=>{const a=worldToPixelCenter(s.from.r,s.from.c);const b=worldToPixelCenter(s.to.r,s.to.c);return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"
+                 stroke="rgba(255,255,255,.22)" stroke-width="2.2"
+                 stroke-linecap="round" marker-end="url(#arrow)" />`}).join('');pathSvg.innerHTML=defs+segs}
+function moveTo(r,c,pushHistory){if(r===cur.r&&c===cur.c)return;if(manhattan(cur,{r,c})!==1)return;const prev={...cur};const next={r,c};const dir=dirFromDelta(next.r-prev.r,next.c-prev.c);cur=next;expandIfNeeded();steps.push({from:prev,to:next});const k=keyOf(cur.r,cur.c);const prevStepCounter=stepCounter;const prevLen=(numsByCell.get(k)||[]).length;const enterInfo=enterCell(k);const wasDiscovered=enterInfo.wasDiscovered;const prevFacing=facing;if(dir!==null)facing=dir;if(pushHistory){recordAction({type:'move',prevCur:prev,nextCur:next,cellKey:k,prevStepCounter,prevLen,wasDiscovered,prevFacing})}
+updateCurrentHighlight();updateMovableHints();renderPaths()}
+function applyToCurrent(kind,color){const k=keyOf(cur.r,cur.c);const prevPaint=painted.has(k)?{...painted.get(k)}:null;painted.set(k,{type:kind,color});recordAction({type:'paint',cellKey:k,prevPaint,nextPaint:{type:kind,color}});const el=cellEls.get(k);if(el)applyPaintToEl(el,painted.get(k));}
+function erasePaintAt(k){const prevPaint=painted.has(k)?{...painted.get(k)}:null;if(!prevPaint)return;painted.delete(k);recordAction({type:'erase',cellKey:k,prevPaint});const el=cellEls.get(k);if(el)applyPaintToEl(el,null);}
+function eraseCurrent(){const k=keyOf(cur.r,cur.c);erasePaintAt(k)}
+function resetAll(){const snapshot={minR,maxR,minC,maxC,cur:{...cur},facing,discovered:Array.from(discovered),numsByCell:Array.from(numsByCell.entries()).map(([k,arr])=>[k,arr.slice()]),stepCounter,painted:Array.from(painted.entries()).map(([k,v])=>[k,{...v}]),steps:steps.map(s=>({from:{...s.from},to:{...s.to}})),tx,ty,};recordAction({type:'reset',snapshot});minR=-2;maxR=2;minC=-2;maxC=2;cur={r:0,c:0};facing=1;discovered.clear();numsByCell.clear();painted.clear();steps.length=0;stepCounter=0;rebuildDomFromScratch();enterCell(keyOf(cur.r,cur.c));updateCurrentHighlight();centerOnCurrent();renderPaths();persistState()}
+function undo(){const last=history.pop();if(!last)return;redoStack.push(last);if(last.type==='paint'){if(last.prevPaint)painted.set(last.cellKey,{...last.prevPaint});else painted.delete(last.cellKey);const el=cellEls.get(last.cellKey);if(el)applyPaintToEl(el,painted.get(last.cellKey)||null);return}
+if(last.type==='erase'){painted.set(last.cellKey,{...last.prevPaint});const el=cellEls.get(last.cellKey);if(el)applyPaintToEl(el,painted.get(last.cellKey));return}
+if(last.type==='move'){if(steps.length>0)steps.pop();stepCounter=last.prevStepCounter;facing=last.prevFacing;const k=last.cellKey;const arr=numsByCell.get(k)||[];arr.length=last.prevLen;if(arr.length===0)numsByCell.delete(k);else numsByCell.set(k,arr);updateCellNumsDisplay(k);if(!last.wasDiscovered&&k!==keyOf(0,0)){setCellHidden(k);numsByCell.delete(k)}
+cur={...last.prevCur};expandIfNeeded();updateCurrentHighlight();updateMovableHints();renderPaths();return}
+if(last.type==='reset'){const s=last.snapshot;minR=s.minR;maxR=s.maxR;minC=s.minC;maxC=s.maxC;cur={...s.cur};facing=s.facing;discovered.clear();for(const k of s.discovered)discovered.add(k);numsByCell.clear();for(const[k,arr]of s.numsByCell)numsByCell.set(k,arr.slice());stepCounter=s.stepCounter;painted.clear();for(const[k,v]of s.painted)painted.set(k,{...v});steps.length=0;for(const seg of s.steps)steps.push(seg);rebuildDomFromScratch();setTranslate(s.tx,s.ty);updateCurrentHighlight();updateMovableHints();renderPaths()}}
+function redo(){const last=redoStack.pop();if(!last)return;if(last.type==='paint'){painted.set(last.cellKey,{...last.nextPaint});const el=cellEls.get(last.cellKey);if(el)applyPaintToEl(el,painted.get(last.cellKey));history.push(last);return}
+if(last.type==='erase'){painted.delete(last.cellKey);const el=cellEls.get(last.cellKey);if(el)applyPaintToEl(el,null);history.push(last);return}
+if(last.type==='move'){isReplayingRedo=!0;moveTo(last.nextCur.r,last.nextCur.c,!0);isReplayingRedo=!1;return}
+if(last.type==='reset'){isReplayingRedo=!0;resetAll();isReplayingRedo=!1}}
+let ctxTarget=null;function hideContextMenu(){ctxMenu.style.display='none';ctxTarget=null}
+function openContextMenu(x,y,target){ctxTarget=target;const disabled=(target.r===cur.r&&target.c===cur.c);ctxGo.disabled=disabled;const hasPaint=painted.has(keyOf(target.r,target.c));ctxErase.disabled=!hasPaint;const pad=8;ctxMenu.style.display='block';const rect=ctxMenu.getBoundingClientRect();const nx=clamp(x,pad,window.innerWidth-rect.width-pad);const ny=clamp(y,pad,window.innerHeight-rect.height-pad);ctxMenu.style.left=nx+'px';ctxMenu.style.top=ny+'px'}
+function buildTraversalPositions(){const positions=[{r:0,c:0}];for(const step of steps){positions.push({r:step.to.r,c:step.to.c})}
+return positions}
+function simplifyRoutePositions(routePositions){const stack=[];const indexByKey=new Map();for(const pos of routePositions){const k=keyOf(pos.r,pos.c);if(indexByKey.has(k)){const idx=indexByKey.get(k);for(let i=stack.length-1;i>idx;i--){const removed=stack.pop();indexByKey.delete(keyOf(removed.r,removed.c))}
+continue}
+stack.push(pos);indexByKey.set(k,stack.length-1)}
+return stack}
+function computeRouteDirsFromHistory(target){const positions=buildTraversalPositions();let targetIndex=-1;for(let i=positions.length-1;i>=0;i--){if(positions[i].r===target.r&&positions[i].c===target.c){targetIndex=i;break}}
+if(targetIndex===-1){return{dirs:[],error:"Chemin indisponible : la cellule n’a pas encore été visitée."}}
+const routePositions=[];for(let i=positions.length-1;i>=targetIndex;i--){routePositions.push(positions[i])}
+const optimizedPositions=simplifyRoutePositions(routePositions);const dirs=[];for(let i=0;i<optimizedPositions.length-1;i++){const from=optimizedPositions[i];const to=optimizedPositions[i+1];const dir=dirFromDelta(to.r-from.r,to.c-from.c);if(dir!==null)dirs.push(dir);}
+return{dirs,error:null}}
+function turnInstruction(currentFacing,targetDir){const diff=(targetDir-currentFacing+4)%4;if(diff===0)return"TOUT DROIT";if(diff===1)return"A DROITE";if(diff===3)return"A GAUCHE";return"DEMI-TOUR"}
+function openRouteModal(target){const routeInfo=computeRouteDirsFromHistory(target);route={target:{...target},stepsDir:routeInfo.dirs,idx:0,facingAtStart:facing,error:routeInfo.error};modalBackdrop.style.display='flex';setModalTranslate(0,0);renderRouteStep()}
+function closeRouteModal(){modalBackdrop.style.display='none';route=null}
+function renderRouteStep(){if(!route)return;if(route.error){modalStepText.textContent="CHEMIN BLOQUÉ";modalMetaText.textContent=route.error;modalDone.textContent="TERMINER";modalDone.disabled=!1;return}
+const total=route.stepsDir.length;if(route.idx>=total){modalStepText.textContent="ARRIVÉ ✅";modalMetaText.textContent="Tu es sur la cellule cible.";modalDone.textContent="TERMINER";modalDone.disabled=!1;return}
+const nextDir=route.stepsDir[route.idx];modalStepText.textContent=turnInstruction(facing,nextDir);modalMetaText.textContent=`Étape ${route.idx + 1} / ${total}`;modalDone.textContent="Étape suivante";modalDone.disabled=!1}
+function doRouteStep(){if(!route)return;if(route.error){closeRouteModal();return}
+if(route.idx>=route.stepsDir.length){closeRouteModal();return}
+const dir=route.stepsDir[route.idx];let nr=cur.r,nc=cur.c;if(dir===0)nr--;if(dir===1)nc++;if(dir===2)nr++;if(dir===3)nc--;moveTo(nr,nc,!0);route.idx++;renderRouteStep()}
+overlayEl.addEventListener('click',(e)=>{const pill=e.target.closest('.pill');if(!pill)return;applyToCurrent(pill.dataset.kind,pill.dataset.color)});validatedList.addEventListener('click',(e)=>{const button=e.target.closest('[data-validated-color]');if(!button)return;const color=button.dataset.validatedColor;if(validatedColors.has(color))validatedColors.delete(color);else validatedColors.add(color);syncValidatedControls();refreshPaintedCells();persistState()});document.getElementById('btnUndo').addEventListener('click',()=>{undo();persistState()});document.getElementById('btnRedo').addEventListener('click',()=>{redo();persistState()});document.getElementById('btnCenter').addEventListener('click',centerOnCurrent);btnReset.addEventListener('click',()=>{showConfirmModal({emoji:'⚠️',title:'Confirmer la réinitialisation',message:'Voulez-vous vraiment réinitialiser le labyrinthe ?',actions:[{label:'Annuler',onClick:()=>{}},{label:'Oui, réinitialiser',primary:!0,onClick:()=>{resetCount+=1;resetAll()}}]})});btnFinishMaze.addEventListener('click',openFinishModal);btnDonation.addEventListener('click',()=>{donationClicks+=1;persistState()});window.addEventListener('keydown',(e)=>{const key=e.key.toLowerCase();const blockedInspectorShortcut=e.key==='F12'||((e.ctrlKey||e.metaKey)&&key==='u')||((e.ctrlKey||e.metaKey)&&e.shiftKey&&(key==='i'||key==='j'||key==='c'));const blockedSaveShortcut=(e.ctrlKey||e.metaKey)&&key==='s';if(blockedInspectorShortcut||blockedSaveShortcut){e.preventDefault();e.stopPropagation();return}
+if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&(e.key==='z'||e.key==='Z')){e.preventDefault();undo();persistState();return}
+if((e.ctrlKey||e.metaKey)&&(e.key==='y'||e.key==='Y'||(e.shiftKey&&(e.key==='z'||e.key==='Z')))){e.preventDefault();redo();persistState();return}
+if(e.altKey||e.ctrlKey||e.metaKey)return;switch(e.key){case 'ArrowUp':e.preventDefault();moveTo(cur.r-1,cur.c,!0);break;case 'ArrowDown':e.preventDefault();moveTo(cur.r+1,cur.c,!0);break;case 'ArrowLeft':e.preventDefault();moveTo(cur.r,cur.c-1,!0);break;case 'ArrowRight':e.preventDefault();moveTo(cur.r,cur.c+1,!0);break;case 'e':case 'E':eraseCurrent();break}
+persistState()});gridLayer.addEventListener('mousedown',(e)=>{if(e.target.closest('#overlay'))return;if(e.button!==0)return;isDraggingGrid=!0;dragMoved=!1;gridLayer.classList.add('dragging');startX=e.clientX;startY=e.clientY;startTx=tx;startTy=ty;hideContextMenu()});window.addEventListener('mousemove',(e)=>{if(!isDraggingGrid)return;const dx=e.clientX-startX;const dy=e.clientY-startY;if(Math.abs(dx)+Math.abs(dy)>3)dragMoved=!0;setTranslate(startTx+dx,startTy+dy)});window.addEventListener('mouseup',()=>{if(!isDraggingGrid)return;isDraggingGrid=!1;setTimeout(()=>{dragMoved=!1},0);gridLayer.classList.remove('dragging');hideTooltip();persistState()});overlayHeader.addEventListener('mousedown',(e)=>{if(e.button!==0)return;isDraggingOverlay=!0;overlayHeader.classList.add('dragging');overlayStartX=e.clientX;overlayStartY=e.clientY;overlayStartTx=overlayTx;overlayStartTy=overlayTy;e.preventDefault();e.stopPropagation()});window.addEventListener('mousemove',(e)=>{if(!isDraggingOverlay)return;const dx=e.clientX-overlayStartX;const dy=e.clientY-overlayStartY;setOverlayTranslate(overlayStartTx+dx,overlayStartTy+dy)});window.addEventListener('mouseup',()=>{if(!isDraggingOverlay)return;isDraggingOverlay=!1;overlayHeader.classList.remove('dragging');persistState()});modalHeader.addEventListener('mousedown',(e)=>{if(e.button!==0)return;isDraggingModal=!0;modalHeader.classList.add('dragging');modalStartX=e.clientX;modalStartY=e.clientY;modalStartTx=modalTx;modalStartTy=modalTy;e.preventDefault();e.stopPropagation()});window.addEventListener('mousemove',(e)=>{if(!isDraggingModal)return;const dx=e.clientX-modalStartX;const dy=e.clientY-modalStartY;setModalTranslate(modalStartTx+dx,modalStartTy+dy)});window.addEventListener('mouseup',()=>{if(!isDraggingModal)return;isDraggingModal=!1;modalHeader.classList.remove('dragging');persistState()});gridLayer.addEventListener('wheel',(e)=>{if(e.target.closest('#overlay'))return;e.preventDefault();const oldSize=getCellSize();const delta=Math.sign(e.deltaY);const newSize=oldSize+(delta>0?-2:+2);const rect=gridLayer.getBoundingClientRect();const mouseX=e.clientX-rect.left;const mouseY=e.clientY-rect.top;const before={x:mouseX-tx,y:mouseY-ty};setCellSize(newSize);const afterSize=getCellSize();const ratio=afterSize/oldSize;const after={x:before.x*ratio,y:before.y*ratio};setTranslate(Math.round(mouseX-after.x),Math.round(mouseY-after.y));renderPaths();persistState()},{passive:!1});window.addEventListener('click',()=>hideContextMenu());window.addEventListener('scroll',()=>hideContextMenu(),!0);window.addEventListener('resize',()=>{hideContextMenu();hideTooltip()});ctxMenu.addEventListener('click',(e)=>e.stopPropagation());ctxGo.addEventListener('click',(e)=>{e.stopPropagation();if(!ctxTarget)return;if(ctxTarget.r===cur.r&&ctxTarget.c===cur.c)return;const target=ctxTarget;hideContextMenu();openRouteModal(target)});ctxErase.addEventListener('click',(e)=>{e.stopPropagation();if(!ctxTarget)return;const key=keyOf(ctxTarget.r,ctxTarget.c);hideContextMenu();erasePaintAt(key);persistState()});modalClose.addEventListener('click',closeRouteModal);modalBackdrop.addEventListener('click',(e)=>{if(e.target===modalBackdrop)closeRouteModal();});modalDone.addEventListener('click',doRouteStep);confirmBackdrop.addEventListener('click',(e)=>{if(e.target===confirmBackdrop)closeConfirmModal();});window.addEventListener('contextmenu',(e)=>{if(e.target.closest('.cell'))return;e.preventDefault();hideContextMenu()});setCellSize(80);syncValidatedControls();(function init(){const loaded=hydrateFromStorage();if(!loaded){rebuildDomFromScratch();enterCell(keyOf(cur.r,cur.c));updateCurrentHighlight();centerOnCurrent();renderPaths();persistState()}})()
+  </script>
+</body>
+</html>
